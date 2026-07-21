@@ -26,18 +26,99 @@ module "github_runners" {
   enable_jit_config                       = true
   enable_job_queued_check                 = true
   enable_runner_bidirectional_label_match = true
-  runners_maximum_count                   = var.maximum_runner_count
-  runner_name_prefix                      = "${var.name_prefix}-"
-  delay_webhook_event                     = 0
-  scale_down_schedule_expression          = "cron(* * * * ? *)"
-  enable_ssm_on_runners                   = false
-  enable_user_data_debug_logging_runner   = false
+  enable_dynamic_labels                   = true
+  ec2_dynamic_labels_policy = {
+    # Dynamic configuration is intentionally default-deny for every EC2
+    # override supported by the pinned module except the bounded instance and
+    # root-volume controls below. Workflow authors must not be able to replace
+    # the AMI, escape the runner subnets, disable encryption, or request GPUs.
+    blocked_keys = [
+      "max-price",
+      "subnet-id",
+      "availability-zone",
+      "availability-zone-id",
+      "weighted-capacity",
+      "priority",
+      "image-id",
+      "vcpu-count-min",
+      "vcpu-count-max",
+      "memory-mib-min",
+      "memory-mib-max",
+      "memory-gib-per-vcpu-min",
+      "memory-gib-per-vcpu-max",
+      "cpu-manufacturers",
+      "instance-generations",
+      "excluded-instance-types",
+      "allowed-instance-types",
+      "burstable-performance",
+      "bare-metal",
+      "accelerator-types",
+      "accelerator-count-min",
+      "accelerator-count-max",
+      "accelerator-manufacturers",
+      "accelerator-names",
+      "accelerator-total-memory-mib-min",
+      "accelerator-total-memory-mib-max",
+      "network-interface-count-min",
+      "network-interface-count-max",
+      "network-bandwidth-gbps-min",
+      "network-bandwidth-gbps-max",
+      "local-storage",
+      "local-storage-types",
+      "total-local-storage-gb-min",
+      "total-local-storage-gb-max",
+      "baseline-ebs-bandwidth-mbps-min",
+      "baseline-ebs-bandwidth-mbps-max",
+      "placement-group-name",
+      "placement-group-id",
+      "placement-tenancy",
+      "placement-host-id",
+      "placement-affinity",
+      "placement-partition-number",
+      "placement-availability-zone",
+      "placement-availability-zone-id",
+      "placement-spread-domain",
+      "placement-host-resource-group-arn",
+      "block-device-name",
+      "ebs-iops",
+      "ebs-throughput",
+      "ebs-encrypted",
+      "ebs-kms-key-id",
+      "ebs-delete-on-termination",
+      "ebs-snapshot-id",
+      "block-device-virtual-name",
+      "block-device-no-device",
+      "spot-max-price-percentage-over-lowest-price",
+      "on-demand-max-price-percentage-over-lowest-price",
+      "max-spot-price-as-percentage-of-optimal-on-demand-price",
+      "require-hibernate-support",
+      "require-encryption-in-transit",
+      "baseline-performance-factors-cpu-reference-families",
+    ]
+    restricted_keys = {
+      "instance-type" = {
+        allowed = var.allowed_dynamic_instance_types
+      }
+      "ebs-volume-size" = {
+        max = var.dynamic_root_volume_max_size_gib
+      }
+      "ebs-volume-type" = {
+        allowed = ["gp3"]
+      }
+    }
+  }
+  runners_maximum_count                 = var.maximum_runner_count
+  runner_name_prefix                    = "${var.name_prefix}-"
+  delay_webhook_event                   = 0
+  scale_down_schedule_expression        = "cron(* * * * ? *)"
+  enable_ssm_on_runners                 = false
+  enable_user_data_debug_logging_runner = false
 
   # Keep the image lean while providing the system Node.js binary that many
   # workflows use before their setup action runs. npm is a separate AL2023
   # package for the namespaced Node.js releases.
   userdata_pre_install = <<-EOT
-    install_with_retry nodejs22 nodejs22-npm
+    install_with_retry nodejs22 nodejs22-npm rsync unzip
   EOT
 
   instance_target_capacity_type = "spot"

@@ -54,7 +54,7 @@ Empty subnets and availability zones do not have an hourly charge. Set
    | `AWS_REGION` | `eu-west-1` |
    | `NAME_PREFIX` | `github-runners` |
    | `RUNNER_GROUP_NAME` | `Default` |
-   | `MAXIMUM_RUNNER_COUNT` | `10` |
+   | `MAXIMUM_RUNNER_COUNT` | `20` |
    | `AVAILABILITY_ZONE_COUNT` | `3` |
    | `REPOSITORY_ALLOW_LIST` | `[]` (the App installation and runner group control access) |
    | `CREATE_SPOT_SERVICE_LINKED_ROLE` | `true` (set `false` if the account already manages it) |
@@ -84,6 +84,26 @@ Empty subnets and availability zones do not have an hourly charge. Set
 
 The first job waits for an EC2 instance to boot. Subsequent jobs also get fresh
 instances unless you deliberately configure a warm pool.
+
+Jobs use a 2-vCPU/8-GiB instance and a 40-GiB encrypted gp3 root volume by
+default. Trusted workflows can select an approved larger x64 instance or a
+larger gp3 root volume with guarded dynamic labels:
+
+```yaml
+runs-on:
+  - self-hosted
+  - linux
+  - x64
+  - ec2-spot
+  - ghr-ec2-instance-type:m7a.xlarge
+  - ghr-ec2-ebs-volume-size:80
+  - ghr-ec2-ebs-volume-type:gp3
+```
+
+The Terraform policy allow-lists instance types and caps dynamic root volumes
+at 200 GiB. AMI, subnet, placement, accelerator, encryption, and arbitrary EBS
+performance overrides are rejected by the webhook. Extend the approved catalog
+in Terraform before a workflow requests a new hardware shape.
 
 ## Checkout, actions, and secrets
 
