@@ -5,6 +5,11 @@
 The quickest reusable setup is the included CloudFormation template:
 
 ```bash
+OIDC_SUBJECT_PREFIX="$(
+  gh api repos/YOUR_ORG/runners/actions/oidc/customization/sub \
+    --jq .sub_claim_prefix
+)"
+
 aws cloudformation deploy \
   --template-file bootstrap/aws-oidc.yaml \
   --stack-name github-runners-bootstrap \
@@ -12,8 +17,14 @@ aws cloudformation deploy \
   --parameter-overrides \
     RepositoryOwner=YOUR_ORG \
     RepositoryName=runners \
+    OidcSubjectPrefix="$OIDC_SUBJECT_PREFIX" \
     ResourcePrefix=github-runners
 ```
+
+Use the API value rather than constructing the subject from names. GitHub
+repositories created after July 15, 2026 use an immutable prefix containing
+the organization and repository IDs, while older repositories can retain the
+name-only prefix.
 
 If the account already has GitHub's OIDC provider, also pass:
 
@@ -46,7 +57,7 @@ to this repository and `main` branch:
       "Condition": {
         "StringEquals": {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:sub": "repo:YOUR_ORG/YOUR_REPOSITORY:ref:refs/heads/main"
+          "token.actions.githubusercontent.com:sub": "YOUR_OIDC_SUBJECT_PREFIX:ref:refs/heads/main"
         }
       }
     }
@@ -54,7 +65,8 @@ to this repository and `main` branch:
 }
 ```
 
-Replace the account, owner, and repository. Store the role ARN as the
+Replace the account and subject prefix. Obtain the exact prefix with the
+`gh api` command above. Store the role ARN as the
 `AWS_DEPLOY_ROLE_ARN` repository secret. The workflow requests `id-token: write`
 only for this exchange.
 

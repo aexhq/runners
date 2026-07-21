@@ -25,8 +25,23 @@ Make sure the App is installed on the exact organization named by
 `TARGET_GITHUB_ORG`, not just created under it. Confirm the App ID and base64
 private key belong to the same App.
 
+## OIDC role assumption is denied
+
+Read the repository's exact subject prefix and compare it with the deployment
+role trust policy:
+
+```bash
+gh api repos/YOUR_ORG/YOUR_REPOSITORY/actions/oidc/customization/sub \
+  --jq .sub_claim_prefix
+```
+
+Append `:ref:refs/heads/main` to that value. Do not assume the prefix is only
+`repo:OWNER/REPOSITORY`: newly created GitHub repositories use immutable owner
+and repository IDs in this claim.
+
 ## `ubuntu-latest` software is missing
 
-The default image is Amazon Linux 2023 with the runner and Docker installed; it
-does not contain GitHub's complete hosted-runner tool cache. Add a setup action,
-run the job in a container, or build and select a custom AMI.
+The default image is Amazon Linux 2023 with the runner, Docker, Git, Node.js 22,
+npm, jq, and curl installed; it does not contain GitHub's complete hosted-runner
+tool cache. Add a setup action, run the job in a container, or build and select
+a custom AMI.

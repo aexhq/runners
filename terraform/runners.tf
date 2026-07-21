@@ -33,6 +33,13 @@ module "github_runners" {
   enable_ssm_on_runners                   = false
   enable_user_data_debug_logging_runner   = false
 
+  # Keep the image lean while providing the system Node.js binary that many
+  # workflows use before their setup action runs. npm is a separate AL2023
+  # package for the namespaced Node.js releases.
+  userdata_pre_install = <<-EOT
+    install_with_retry nodejs22 nodejs22-npm
+  EOT
+
   instance_target_capacity_type = "spot"
   instance_allocation_strategy  = "price-capacity-optimized"
   instance_types                = var.instance_types

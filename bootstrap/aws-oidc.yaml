@@ -11,6 +11,10 @@ Parameters:
     Default: runners
     Description: GitHub bootstrap repository name
     AllowedPattern: "^[A-Za-z0-9_.-]+$"
+  OidcSubjectPrefix:
+    Type: String
+    Description: Exact sub_claim_prefix returned by the GitHub repository OIDC API
+    AllowedPattern: "^repo:[A-Za-z0-9-]+(@[0-9]+)?/[A-Za-z0-9_.-]+(@[0-9]+)?$"
   ResourcePrefix:
     Type: String
     Default: github-runners
@@ -77,6 +81,20 @@ Resources:
               - ssm:*
               - sts:GetCallerIdentity
               - xray:*
+          - Sid: PassRunnerRoleMaximum
+            Effect: Allow
+            Resource: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${ResourcePrefix}/*"
+            Action: iam:PassRole
+            Condition:
+              StringEquals:
+                iam:PassedToService: ec2.amazonaws.com
+          - Sid: CreateSpotServiceLinkedRoleMaximum
+            Effect: Allow
+            Resource: !Sub "arn:${AWS::Partition}:iam::*:role/aws-service-role/spot.amazonaws.com/AWSServiceRoleForEC2Spot"
+            Action: iam:CreateServiceLinkedRole
+            Condition:
+              StringEquals:
+                iam:AWSServiceName: spot.amazonaws.com
 
   DeploymentPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -206,7 +224,7 @@ Resources:
             Condition:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
-                token.actions.githubusercontent.com:sub: !Sub "repo:${RepositoryOwner}/${RepositoryName}:ref:refs/heads/main"
+                token.actions.githubusercontent.com:sub: !Sub "${OidcSubjectPrefix}:ref:refs/heads/main"
       Tags:
         - Key: ManagedBy
           Value: cloudformation
