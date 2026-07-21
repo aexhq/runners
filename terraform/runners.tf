@@ -69,5 +69,8 @@ module "github_runners" {
     GitHubOrganization = var.github_organization
     RunnerLifecycle    = "ephemeral"
     CapacityType       = "spot"
+    ManagedBy          = "terraform"
+    Project            = var.name_prefix
+    Service            = "github-actions-runners"
   })
 }

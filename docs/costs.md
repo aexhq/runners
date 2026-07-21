@@ -27,3 +27,16 @@ not the absolute lowest price.
 
 Set an AWS Budget and alarms before enabling the fleet. `MAXIMUM_RUNNER_COUNT`
 is the hard concurrency/cost guardrail and defaults to 10.
+
+## Cost allocation
+
+Terraform resources, ephemeral instances and volumes, network interfaces, and
+the dedicated state bucket use `Project=NAME_PREFIX`. They also carry
+`Service=github-actions-runners`; runner resources additionally identify their
+capacity type and lifecycle.
+
+In **AWS Billing and Cost Management → Cost allocation tags**, activate the
+user-defined `Project` tag. In Cost Explorer, filter or group by **Tag →
+Project** and select the configured `NAME_PREFIX`. AWS can take up to 24 hours
+to expose a new tag key and refresh cost data, and costs incurred before a tag
+was activated are not backfilled under that tag.
