@@ -5,6 +5,7 @@ provider "aws" {
     tags = merge(var.tags, {
       ManagedBy          = "terraform"
       Project            = var.name_prefix
+      Service            = "github-actions-runners"
       GitHubOrganization = var.github_organization
     })
   }

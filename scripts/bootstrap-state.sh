@@ -6,6 +6,7 @@ region="${AWS_REGION:?AWS_REGION must be set}"
 account_id="$(aws sts get-caller-identity --query Account --output text)"
 bucket="${TF_STATE_BUCKET:-github-runners-tfstate-${account_id}-${region}}"
 repository="${GITHUB_REPOSITORY:-local/runners}"
+project="${TF_VAR_name_prefix:-github-runners}"
 state_key="github/${repository}/terraform.tfstate"
 bucket_created=false
 
@@ -39,7 +40,7 @@ aws s3api put-bucket-ownership-controls \
 if [[ "${bucket_created}" == "true" ]]; then
   aws s3api put-bucket-tagging \
     --bucket "${bucket}" \
-    --tagging 'TagSet=[{Key=ManagedBy,Value=github-actions},{Key=Purpose,Value=terraform-state}]'
+    --tagging "TagSet=[{Key=ManagedBy,Value=github-actions},{Key=Purpose,Value=terraform-state},{Key=Project,Value=${project}},{Key=Service,Value=github-actions-runners}]"
 fi
 
 mkdir -p "$(dirname "${backend_file}")"
