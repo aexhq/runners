@@ -1,0 +1,222 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: GitHub OIDC deployment role and workload boundary for EC2 Spot runners
+
+Parameters:
+  RepositoryOwner:
+    Type: String
+    Description: GitHub organization or user that owns the bootstrap repository
+    AllowedPattern: "^[A-Za-z0-9-]+$"
+  RepositoryName:
+    Type: String
+    Default: runners
+    Description: GitHub bootstrap repository name
+    AllowedPattern: "^[A-Za-z0-9_.-]+$"
+  ResourcePrefix:
+    Type: String
+    Default: github-runners
+    Description: Must equal the NAME_PREFIX GitHub repository variable
+    AllowedPattern: "^[a-z0-9][a-z0-9-]{1,18}[a-z0-9]$"
+  CreateGitHubOidcProvider:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: Set false when token.actions.githubusercontent.com already exists in this account
+  ExistingGitHubOidcProviderArn:
+    Type: String
+    Default: ""
+    Description: Required when CreateGitHubOidcProvider is false
+
+Rules:
+  ExistingProviderRequired:
+    RuleCondition: !Equals [!Ref CreateGitHubOidcProvider, "false"]
+    Assertions:
+      - Assert: !Not [!Equals [!Ref ExistingGitHubOidcProviderArn, ""]]
+        AssertDescription: ExistingGitHubOidcProviderArn is required when provider creation is disabled
+
+Conditions:
+  CreateOidcProvider: !Equals [!Ref CreateGitHubOidcProvider, "true"]
+
+Resources:
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CreateOidcProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: [sts.amazonaws.com]
+      Tags:
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: Repository
+          Value: !Sub "${RepositoryOwner}/${RepositoryName}"
+
+  RunnerRoleBoundary:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Maximum permissions for runner instances and scaling functions
+      Path: /security/
+      ManagedPolicyName: !Sub "${RepositoryOwner}-${RepositoryName}-workload-boundary"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: RunnerControlPlaneMaximumPermissions
+            Effect: Allow
+            Resource: "*"
+            Action:
+              - cloudwatch:*
+              - ec2:*
+              - events:*
+              - kms:Decrypt
+              - kms:DescribeKey
+              - kms:Encrypt
+              - kms:GenerateDataKey
+              - lambda:*
+              - logs:*
+              - s3:*
+              - scheduler:*
+              - sqs:*
+              - ssm:*
+              - sts:GetCallerIdentity
+              - xray:*
+
+  DeploymentPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Deploy the GitHub EC2 Spot runner stack
+      Path: /github-actions/
+      ManagedPolicyName: !Sub "${RepositoryOwner}-${RepositoryName}-deploy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ManageRunnerInfrastructure
+            Effect: Allow
+            Resource: "*"
+            Action:
+              - apigateway:*
+              - cloudwatch:*
+              - ec2:*
+              - events:*
+              - kms:DescribeKey
+              - kms:ListAliases
+              - lambda:*
+              - logs:*
+              - resource-groups:*
+              - s3:*
+              - scheduler:*
+              - servicequotas:GetServiceQuota
+              - sqs:*
+              - ssm:*
+              - sts:GetCallerIdentity
+              - tag:GetResources
+              - tag:GetTagKeys
+              - tag:GetTagValues
+              - xray:*
+          - Sid: ReadIam
+            Effect: Allow
+            Resource: "*"
+            Action:
+              - iam:Get*
+              - iam:List*
+          - Sid: CreateBoundedRunnerRoles
+            Effect: Allow
+            Resource: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${ResourcePrefix}/*"
+            Action: iam:CreateRole
+            Condition:
+              StringEquals:
+                iam:PermissionsBoundary: !Ref RunnerRoleBoundary
+          - Sid: ManageRunnerRoles
+            Effect: Allow
+            Resource: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${ResourcePrefix}/*"
+            Action:
+              - iam:AttachRolePolicy
+              - iam:DeleteRole
+              - iam:DeleteRolePermissionsBoundary
+              - iam:DeleteRolePolicy
+              - iam:DetachRolePolicy
+              - iam:GetRolePolicy
+              - iam:ListAttachedRolePolicies
+              - iam:ListRolePolicies
+              - iam:PutRolePermissionsBoundary
+              - iam:PutRolePolicy
+              - iam:TagRole
+              - iam:UntagRole
+              - iam:UpdateAssumeRolePolicy
+          - Sid: ManageRunnerPolicies
+            Effect: Allow
+            Resource: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/${ResourcePrefix}/*"
+            Action:
+              - iam:CreatePolicy
+              - iam:CreatePolicyVersion
+              - iam:DeletePolicy
+              - iam:DeletePolicyVersion
+              - iam:GetPolicy
+              - iam:GetPolicyVersion
+              - iam:ListPolicyVersions
+              - iam:TagPolicy
+              - iam:UntagPolicy
+          - Sid: ManageRunnerInstanceProfiles
+            Effect: Allow
+            Resource: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:instance-profile/${ResourcePrefix}/*"
+            Action:
+              - iam:AddRoleToInstanceProfile
+              - iam:CreateInstanceProfile
+              - iam:DeleteInstanceProfile
+              - iam:GetInstanceProfile
+              - iam:RemoveRoleFromInstanceProfile
+              - iam:TagInstanceProfile
+              - iam:UntagInstanceProfile
+          - Sid: PassRunnerRoles
+            Effect: Allow
+            Resource: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${ResourcePrefix}/*"
+            Action: iam:PassRole
+            Condition:
+              StringLike:
+                iam:PassedToService:
+                  - ec2.amazonaws.com
+                  - lambda.amazonaws.com
+                  - scheduler.amazonaws.com
+          - Sid: ManageSpotServiceLinkedRole
+            Effect: Allow
+            Resource: "*"
+            Action:
+              - iam:CreateServiceLinkedRole
+              - iam:DeleteServiceLinkedRole
+              - iam:GetServiceLinkedRoleDeletionStatus
+            Condition:
+              StringLike:
+                iam:AWSServiceName: spot.amazonaws.com
+
+  DeploymentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${RepositoryOwner}-${RepositoryName}-deploy"
+      Path: /github-actions/
+      Description: !Sub "GitHub OIDC deployment role for ${RepositoryOwner}/${RepositoryName}"
+      MaxSessionDuration: 3600
+      ManagedPolicyArns: [!Ref DeploymentPolicy]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - CreateOidcProvider
+                - !Ref GitHubOidcProvider
+                - !Ref ExistingGitHubOidcProviderArn
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Sub "repo:${RepositoryOwner}/${RepositoryName}:ref:refs/heads/main"
+      Tags:
+        - Key: ManagedBy
+          Value: cloudformation
+        - Key: Repository
+          Value: !Sub "${RepositoryOwner}/${RepositoryName}"
+
+Outputs:
+  DeploymentRoleArn:
+    Description: Store this as the AWS_DEPLOY_ROLE_ARN repository secret
+    Value: !GetAtt DeploymentRole.Arn
+  RunnerRolePermissionsBoundaryArn:
+    Description: Store this as the RUNNER_ROLE_PERMISSIONS_BOUNDARY_ARN repository variable
+    Value: !Ref RunnerRoleBoundary

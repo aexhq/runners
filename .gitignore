@@ -1,0 +1,20 @@
+# Terraform working data and local state.
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+terraform/.backend.hcl
+terraform/.lambda/
+
+# Local credentials and environment overrides.
+.env
+.env.*
+!.env.example
+
+# Editor and OS files.
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

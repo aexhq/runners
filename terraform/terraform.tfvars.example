@@ -1,0 +1,13 @@
+# Non-secret local overrides. CI normally supplies these through repository
+# variables and TF_VAR_* environment variables.
+aws_region                 = "eu-west-1"
+github_organization        = "octo-org"
+name_prefix                = "github-runners"
+availability_zone_count    = 3
+maximum_runner_count       = 10
+runner_group_name          = "Default"
+repository_allow_list      = ["octo-org/example-private-repository"]
+create_service_linked_role_spot = true
+runner_role_permissions_boundary_arn = null
+
+# Never place GitHub App credentials in a committed tfvars file.
