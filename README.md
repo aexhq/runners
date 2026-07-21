@@ -43,7 +43,8 @@ Empty subnets and availability zones do not have an hourly charge. Set
 
    For a new AWS account, `bootstrap/aws-oidc.yaml` creates the recommended
    OIDC role and workload permissions boundary without storing AWS keys in
-   GitHub.
+   GitHub. The setup command reads GitHub's exact OIDC subject prefix, including
+   immutable repository IDs when applicable.
 
 4. Optionally add repository variables. Defaults are shown below:
 
@@ -111,8 +112,9 @@ but you should still restrict the runner group to selected, trusted repositories
 and avoid unreviewed fork pull requests.
 
 Amazon Linux 2023 is not a byte-for-byte replacement for GitHub's
-`ubuntu-latest` image. Use setup actions or a job container for tools your build
-needs. Docker and container/service jobs are supported.
+`ubuntu-latest` image. The baseline includes Docker, Git, Node.js 22, npm, jq,
+curl, and the runner itself. Use setup actions or a job container for other
+tools your build needs. Docker and container/service jobs are supported.
 
 ## Operations
 
