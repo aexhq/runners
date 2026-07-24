@@ -111,12 +111,15 @@ module "github_runners" {
       }
     }
   }
-  runners_maximum_count                 = var.maximum_runner_count
-  runner_name_prefix                    = "${var.name_prefix}-"
-  delay_webhook_event                   = 0
-  scale_down_schedule_expression        = "cron(* * * * ? *)"
-  enable_ssm_on_runners                 = false
-  enable_user_data_debug_logging_runner = false
+  runners_maximum_count = var.maximum_runner_count
+  runner_name_prefix    = "${var.name_prefix}-"
+  delay_webhook_event   = 0
+  # Launch several independent ephemeral runners concurrently for workflow
+  # fan-out; retain the fleet-wide maximum as the safety bound.
+  scale_up_reserved_concurrent_executions = 36
+  scale_down_schedule_expression          = "cron(* * * * ? *)"
+  enable_ssm_on_runners                   = false
+  enable_user_data_debug_logging_runner   = false
 
   # Keep the image lean while providing the system Node.js binary that many
   # workflows use before their setup action runs. npm is a separate AL2023
