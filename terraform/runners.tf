@@ -22,9 +22,13 @@ module "github_runners" {
   runner_extra_labels         = ["ec2-spot"]
   repository_white_list       = var.repository_allow_list
 
-  enable_ephemeral_runners                = true
-  enable_jit_config                       = true
-  enable_job_queued_check                 = true
+  enable_ephemeral_runners = true
+  enable_jit_config        = true
+  # Ephemeral jobs must scale from the webhook event itself. GitHub's job
+  # API can briefly report a newly-created job as not queued even though the
+  # workflow is waiting for a runner; enabling this check drops that event
+  # and strands the job indefinitely.
+  enable_job_queued_check                 = false
   enable_runner_bidirectional_label_match = true
   enable_dynamic_labels                   = true
   ec2_dynamic_labels_policy = {

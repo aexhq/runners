@@ -85,6 +85,12 @@ Empty subnets and availability zones do not have an hourly charge. Set
 The first job waits for an EC2 instance to boot. Subsequent jobs also get fresh
 instances unless you deliberately configure a warm pool.
 
+Ephemeral scaling intentionally does not re-check GitHub's job API before
+launching. GitHub can briefly report a new workflow job as not queued while
+the webhook is already waiting for a runner; enabling that check can strand the
+job. A cancelled job may therefore cause one short-lived Spot instance to be
+created, but a valid queued job is never dropped by a transient API race.
+
 Jobs use a 2-vCPU/8-GiB instance and a 40-GiB encrypted gp3 root volume by
 default. Trusted workflows can select an approved larger x64 instance or a
 larger gp3 root volume with guarded dynamic labels:
