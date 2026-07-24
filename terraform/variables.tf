@@ -67,16 +67,9 @@ variable "availability_zone_count" {
 }
 
 variable "instance_types" {
-  description = "Diversified x64 EC2 instance types offered to Spot."
+  description = "Normal x64 EC2 Spot type for the warm pool and standard jobs; large jobs use guarded dynamic labels."
   type        = list(string)
-  default = [
-    "m7a.large",
-    "m7i.large",
-    "m6a.large",
-    "m6i.large",
-    "m5a.large",
-    "m5.large",
-  ]
+  default     = ["m6i.large"]
 
   validation {
     condition     = length(var.instance_types) > 0
