@@ -19,8 +19,11 @@ module "github_runners" {
 
   enable_organization_runners = true
   runner_group_name           = var.runner_group_name
-  runner_extra_labels         = ["ec2-spot", "ghr-ec2-instance-type:m6i.large"]
-  repository_white_list       = var.repository_allow_list
+  # Keep dynamic `ghr-*` labels out of the base matcher. The webhook
+  # dispatcher strips those labels while matching and adds them back to the
+  # ephemeral runner created for that job.
+  runner_extra_labels   = ["ec2-spot"]
+  repository_white_list = var.repository_allow_list
 
   enable_ephemeral_runners = true
   enable_jit_config        = true
