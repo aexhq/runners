@@ -120,12 +120,11 @@ module "github_runners" {
   # fan-out; retain the fleet-wide maximum as the safety bound.
   scale_up_reserved_concurrent_executions = 36
   scale_down_schedule_expression          = "cron(* * * * ? *)"
-  # Keep two normal m6i.large runners registered during the release/workday
-  # window. They remain ephemeral: the first two queued jobs consume them and
-  # the scale-up path replenishes capacity. Large dynamic-label jobs are not
-  # kept warm.
+  # Keep two normal m6i.large runners registered at all times. They remain
+  # ephemeral: the first two queued jobs consume them and the scale-up path
+  # replenishes capacity. Large dynamic-label jobs are not kept warm.
   idle_config = [{
-    cron             = "* * 7-19 * * 1-5"
+    cron             = "* * * * *"
     timeZone         = "Europe/London"
     idleCount        = 2
     evictionStrategy = "oldest_first"
