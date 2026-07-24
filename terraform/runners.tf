@@ -124,7 +124,7 @@ module "github_runners" {
   # ephemeral: the first two queued jobs consume them and the scale-up path
   # replenishes capacity. Large dynamic-label jobs are not kept warm.
   idle_config = [{
-    cron             = "* * * * *"
+    cron             = "* * * * * *"
     timeZone         = "Europe/London"
     idleCount        = 2
     evictionStrategy = "oldest_first"
