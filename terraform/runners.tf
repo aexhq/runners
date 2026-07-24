@@ -19,8 +19,10 @@ module "github_runners" {
 
   enable_organization_runners = true
   runner_group_name           = var.runner_group_name
-  runner_extra_labels         = ["ec2-spot"]
-  repository_white_list       = var.repository_allow_list
+  # Keep the warm baseline discoverable by the platform's normal selector.
+  # Large jobs can still append their own dynamic labels.
+  runner_extra_labels   = ["ec2-spot", "ghr-ec2-instance-type:m6i.large"]
+  repository_white_list = var.repository_allow_list
 
   enable_ephemeral_runners = true
   enable_jit_config        = true
@@ -118,8 +120,18 @@ module "github_runners" {
   # fan-out; retain the fleet-wide maximum as the safety bound.
   scale_up_reserved_concurrent_executions = 36
   scale_down_schedule_expression          = "cron(* * * * ? *)"
-  enable_ssm_on_runners                   = false
-  enable_user_data_debug_logging_runner   = false
+  # Keep two normal m6i.large runners registered during the release/workday
+  # window. They remain ephemeral: the first two queued jobs consume them and
+  # the scale-up path replenishes capacity. Large dynamic-label jobs are not
+  # kept warm.
+  idle_config = [{
+    cron             = "* * 7-19 * * 1-5"
+    timeZone         = "Europe/London"
+    idleCount        = 2
+    evictionStrategy = "oldest_first"
+  }]
+  enable_ssm_on_runners                 = false
+  enable_user_data_debug_logging_runner = false
 
   # Keep the image lean while providing the system Node.js binary that many
   # workflows use before their setup action runs. npm is a separate AL2023

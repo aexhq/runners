@@ -82,8 +82,11 @@ Empty subnets and availability zones do not have an hourly charge. Set
    runs-on: [self-hosted, linux, x64, ec2-spot]
    ```
 
-The first job waits for an EC2 instance to boot. Subsequent jobs also get fresh
-instances unless you deliberately configure a warm pool.
+The fleet keeps two normal `m6i.large` ephemeral runners warm during the
+weekday release window (`Europe/London`, 07:00–19:59). The first two jobs can
+use those registered runners immediately; the fleet still scales out with EC2
+Spot when the pool is consumed. Large jobs remain cold and use their guarded
+dynamic labels only when requested.
 
 Ephemeral scaling intentionally does not re-check GitHub's job API before
 launching. GitHub can briefly report a new workflow job as not queued while
@@ -141,6 +144,11 @@ Amazon Linux 2023 is not a byte-for-byte replacement for GitHub's
 `ubuntu-latest` image. The baseline includes Docker, Git, Node.js 22, npm, jq,
 curl, and the runner itself. Use setup actions or a job container for other
 tools your build needs. Docker and container/service jobs are supported.
+
+The pinned module-managed Amazon Linux 2023 image is the validated baseline;
+this repository does not select an untested custom AMI. A future pre-baked
+Image Builder/Packer AMI must be built and validated here before changing the
+runner image contract.
 
 ## Operations
 
