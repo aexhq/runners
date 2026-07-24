@@ -19,7 +19,7 @@ module "github_runners" {
 
   enable_organization_runners = true
   runner_group_name           = var.runner_group_name
-  runner_extra_labels         = ["ec2-spot"]
+  runner_extra_labels         = ["ec2-spot", "ghr-ec2-instance-type:m6i.large"]
   repository_white_list       = var.repository_allow_list
 
   enable_ephemeral_runners = true
