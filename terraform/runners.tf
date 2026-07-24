@@ -120,14 +120,15 @@ module "github_runners" {
   # fan-out; retain the fleet-wide maximum as the safety bound.
   scale_up_reserved_concurrent_executions = 36
   scale_down_schedule_expression          = "cron(* * * * ? *)"
-  # Keep two normal m6i.large runners registered at all times. They remain
-  # ephemeral: the first two queued jobs consume them and the scale-up path
-  # replenishes capacity. Large dynamic-label jobs are not kept warm.
-  idle_config = [{
-    cron             = "* * * * * *"
-    timeZone         = "Europe/London"
-    idleCount        = 2
-    evictionStrategy = "oldest_first"
+  # Keep two normal m6i.large runners pre-registered at all times. The module
+  # pool Lambda maintains this organization-level ephemeral pool; the first
+  # two queued jobs consume it and the pool replenishes capacity. Large
+  # dynamic-label jobs remain on-demand and are not placed in this pool.
+  pool_runner_owner = var.github_organization
+  pool_config = [{
+    size                         = 2
+    schedule_expression          = "cron(* * * * ? *)"
+    schedule_expression_timezone = "Europe/London"
   }]
   enable_ssm_on_runners                 = false
   enable_user_data_debug_logging_runner = false
