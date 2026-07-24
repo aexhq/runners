@@ -82,10 +82,13 @@ Empty subnets and availability zones do not have an hourly charge. Set
    runs-on: [self-hosted, linux, x64, ec2-spot]
    ```
 
-The fleet keeps two normal `m6i.large` ephemeral runners warm at all times.
-The first two jobs can use those registered runners immediately; the fleet
-still scales out with EC2 Spot when the pool is consumed. Large jobs remain
-cold and use their guarded dynamic labels only when requested.
+Demand scale-up batches up to three nearby workflow-job webhook deliveries for
+one scale-up invocation and requests a three-runner ephemeral `m6i.large` Spot
+burst for each valid job group. When concurrent jobs are already queued, they
+consume the burst immediately; when they are not, the unused runners are
+reaped by the one-minute cleanup Lambda after the one-minute minimum runtime.
+There is no always-on warm pool. Large jobs remain cold and use their guarded
+dynamic labels only when requested.
 
 Ephemeral scaling intentionally does not re-check GitHub's job API before
 launching. GitHub can briefly report a new workflow job as not queued while
