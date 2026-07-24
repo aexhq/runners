@@ -37,6 +37,9 @@ webhook-to-SQS path is sufficient for one runner class and has fewer resources.
 The runner binary syncer remains enabled so fresh instances do not need to fetch
 the runner distribution directly from GitHub every time. The SQS event source
 mapping batches up to three nearby queued jobs; the scale-up Lambda requests a
-bounded three-runner burst for each valid job group. The one-minute EventBridge
+bounded three-runner burst for each valid job group. `ghr-*` labels are dynamic
+job labels, so they are intentionally not part of the base webhook matcher;
+the scale-up Lambda applies them to the ephemeral runner for that job. The
+one-minute EventBridge
 rule is cleanup only, and does not maintain idle capacity; unused ephemeral
 runners are eligible for termination after the one-minute minimum runtime.
