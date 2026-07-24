@@ -19,10 +19,8 @@ module "github_runners" {
 
   enable_organization_runners = true
   runner_group_name           = var.runner_group_name
-  # Keep the warm baseline discoverable by the platform's normal selector.
-  # Large jobs can still append their own dynamic labels.
-  runner_extra_labels   = ["ec2-spot", "ghr-ec2-instance-type:m6i.large"]
-  repository_white_list = var.repository_allow_list
+  runner_extra_labels         = ["ec2-spot"]
+  repository_white_list       = var.repository_allow_list
 
   enable_ephemeral_runners = true
   enable_jit_config        = true
@@ -116,20 +114,16 @@ module "github_runners" {
   runners_maximum_count = var.maximum_runner_count
   runner_name_prefix    = "${var.name_prefix}-"
   delay_webhook_event   = 0
-  # Launch several independent ephemeral runners concurrently for workflow
-  # fan-out; retain the fleet-wide maximum as the safety bound.
-  scale_up_reserved_concurrent_executions = 36
-  scale_down_schedule_expression          = "cron(* * * * ? *)"
-  # Keep two normal m6i.large runners pre-registered at all times. The module
-  # pool Lambda maintains this organization-level ephemeral pool; the first
-  # two queued jobs consume it and the pool replenishes capacity. Large
-  # dynamic-label jobs remain on-demand and are not placed in this pool.
-  pool_runner_owner = var.github_organization
-  pool_config = [{
-    size                         = 2
-    schedule_expression          = "cron(* * * * ? *)"
-    schedule_expression_timezone = "Europe/London"
-  }]
+  # The pinned module creates one runner per queued SQS message. Batch nearby
+  # webhook deliveries so concurrent jobs launch together, while serializing
+  # scale-up invocations to keep each demand burst bounded at three jobs.
+  scale_up_reserved_concurrent_executions                        = 1
+  lambda_event_source_mapping_batch_size                         = 3
+  lambda_event_source_mapping_maximum_batching_window_in_seconds = 1
+  # Cleanup only: this is not a warm-capacity schedule. Unused ephemeral
+  # runners are removed after the module's minimum Linux runtime.
+  scale_down_schedule_expression        = "cron(* * * * ? *)"
+  minimum_running_time_in_minutes       = 1
   enable_ssm_on_runners                 = false
   enable_user_data_debug_logging_runner = false
 

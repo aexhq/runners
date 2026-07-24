@@ -67,7 +67,7 @@ variable "availability_zone_count" {
 }
 
 variable "instance_types" {
-  description = "Normal x64 EC2 Spot type for the warm pool and standard jobs; large jobs use guarded dynamic labels."
+  description = "Normal x64 EC2 Spot type for standard jobs; large jobs use guarded dynamic labels."
   type        = list(string)
   default     = ["m6i.large"]
 

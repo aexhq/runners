@@ -30,6 +30,9 @@ jobs:
       - name: Initialize Terraform without a backend
         run: terraform -chdir=terraform init -backend=false
 
+      - name: Build demand-burst runner Lambda
+        run: bash scripts/build-burst-runner-lambda.sh
+
       - name: Validate Terraform
         run: terraform -chdir=terraform validate
 
