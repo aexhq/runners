@@ -127,8 +127,12 @@ module "github_runners" {
   lambda_event_source_mapping_maximum_batching_window_in_seconds = 1
   # Cleanup only: this is not a warm-capacity schedule. Unused ephemeral
   # runners are removed after the module's minimum Linux runtime.
-  scale_down_schedule_expression        = "cron(* * * * ? *)"
-  minimum_running_time_in_minutes       = 1
+  scale_down_schedule_expression = "cron(* * * * ? *)"
+  # Give a newly registered burst runner a few scheduler ticks to receive its
+  # queued job before the one-minute cleanup loop considers it idle. This is a
+  # startup grace period, not an always-on pool: an unused burst runner is
+  # still removed on the next eligible cleanup pass.
+  minimum_running_time_in_minutes       = 3
   enable_ssm_on_runners                 = false
   enable_user_data_debug_logging_runner = false
 
