@@ -19,13 +19,22 @@ module "github_runners" {
 
   enable_organization_runners = true
   runner_group_name           = var.runner_group_name
-  runner_extra_labels         = ["ec2-spot"]
-  repository_white_list       = var.repository_allow_list
+  # Keep the default instance selector on every runner. Dynamic labels are
+  # also copied from each workflow job into its JIT runner configuration.
+  runner_extra_labels   = ["ec2-spot", "ghr-ec2-instance-type:m6i.large"]
+  repository_white_list = var.repository_allow_list
 
-  enable_ephemeral_runners                = true
-  enable_jit_config                       = true
-  enable_job_queued_check                 = true
-  enable_runner_bidirectional_label_match = true
+  enable_ephemeral_runners = true
+  enable_jit_config        = true
+  # Ephemeral jobs must scale from the webhook event itself. GitHub's job
+  # API can briefly report a newly-created job as not queued even though the
+  # workflow is waiting for a runner; enabling this check drops that event
+  # and strands the job indefinitely.
+  enable_job_queued_check = false
+  # The webhook strips ghr-* labels before matching. Requiring the runner
+  # label set to be a bidirectional exact match would reject that valid
+  # dynamic-label workflow shape before scale-up can dispatch it.
+  enable_runner_bidirectional_label_match = false
   enable_dynamic_labels                   = true
   ec2_dynamic_labels_policy = {
     # Dynamic configuration is intentionally default-deny for every EC2
@@ -107,10 +116,23 @@ module "github_runners" {
       }
     }
   }
-  runners_maximum_count                 = var.maximum_runner_count
-  runner_name_prefix                    = "${var.name_prefix}-"
-  delay_webhook_event                   = 0
-  scale_down_schedule_expression        = "cron(* * * * ? *)"
+  runners_maximum_count = var.maximum_runner_count
+  runner_name_prefix    = "${var.name_prefix}-"
+  delay_webhook_event   = 0
+  # The pinned module creates one runner per queued SQS message. Batch nearby
+  # webhook deliveries so concurrent jobs launch together, while serializing
+  # scale-up invocations to keep each demand burst bounded at three jobs.
+  scale_up_reserved_concurrent_executions                        = 1
+  lambda_event_source_mapping_batch_size                         = 3
+  lambda_event_source_mapping_maximum_batching_window_in_seconds = 1
+  # Cleanup only: this is not a warm-capacity schedule. Unused ephemeral
+  # runners are removed after the module's minimum Linux runtime.
+  scale_down_schedule_expression = "cron(* * * * ? *)"
+  # Give a newly registered burst runner a few scheduler ticks to receive its
+  # queued job before the one-minute cleanup loop considers it idle. This is a
+  # startup grace period, not an always-on pool: an unused burst runner is
+  # still removed on the next eligible cleanup pass.
+  minimum_running_time_in_minutes       = 3
   enable_ssm_on_runners                 = false
   enable_user_data_debug_logging_runner = false
 

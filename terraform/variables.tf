@@ -67,7 +67,18 @@ variable "availability_zone_count" {
 }
 
 variable "instance_types" {
-  description = "Diversified x64 EC2 instance types offered to Spot."
+  description = "Normal x64 EC2 Spot type for standard jobs; large jobs use guarded dynamic labels."
+  type        = list(string)
+  default     = ["m6i.large"]
+
+  validation {
+    condition     = length(var.instance_types) > 0
+    error_message = "instance_types must contain at least one EC2 instance type."
+  }
+}
+
+variable "allowed_dynamic_instance_types" {
+  description = "Approved x64 instance types workflows may request with ghr-ec2-instance-type."
   type        = list(string)
   default = [
     "m7a.large",
@@ -76,11 +87,25 @@ variable "instance_types" {
     "m6i.large",
     "m5a.large",
     "m5.large",
+    "m7a.xlarge",
+    "m7i.xlarge",
+    "m6a.xlarge",
+    "m6i.xlarge",
+    "m5a.xlarge",
+    "m5.xlarge",
+    "c7a.xlarge",
+    "c7i.xlarge",
+    "c6a.xlarge",
+    "c6i.xlarge",
+    "r7a.xlarge",
+    "r7i.xlarge",
+    "r6a.xlarge",
+    "r6i.xlarge",
   ]
 
   validation {
-    condition     = length(var.instance_types) > 0
-    error_message = "instance_types must contain at least one EC2 instance type."
+    condition     = length(var.allowed_dynamic_instance_types) > 0
+    error_message = "allowed_dynamic_instance_types must contain at least one EC2 instance type."
   }
 }
 

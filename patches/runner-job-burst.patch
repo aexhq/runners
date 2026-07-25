@@ -1,0 +1,36 @@
+diff --git a/lambdas/functions/control-plane/src/scale-runners/scale-up.ts b/lambdas/functions/control-plane/src/scale-runners/scale-up.ts
+--- a/lambdas/functions/control-plane/src/scale-runners/scale-up.ts
++++ b/lambdas/functions/control-plane/src/scale-runners/scale-up.ts
+@@ -569,21 +569,25 @@ export async function scaleUp(payloads: ActionRequestMessageSQS[]): Promise<string[]> {
+       maximumRunners,
+     });
+ 
+-    // Calculate how many runners we want to create.
+-    // Use Math.max(0, ...) to ensure we never attempt to create a negative number of runners,
+-    // which can happen when currentRunners exceeds maximumRunners due to pool/scale-up race conditions.
++    // Request a small speculative burst for each queued job. The extra
++    // ephemeral runners are useful when concurrent jobs arrive together and
++    // are reclaimed by scale-down when they remain idle.
++    const desiredNewRunners = Math.max(scaleUp, 3);
++
++    // Calculate how many runners we want to create, respecting the fleet
++    // maximum. Use Math.max(0, ...) to ensure we never attempt to create a
++    // negative number of runners when a pool/scale-up race has overshot it.
+     const newRunners =
+       maximumRunners === -1
+-        ? // If we don't have an upper limit, scale up by the number of new jobs.
+-          scaleUp
++        ? desiredNewRunners
+         : // Otherwise, we do have a limit, so work out if `scaleUp` would exceed it.
+-          Math.max(0, Math.min(scaleUp, maximumRunners - currentRunners));
++          Math.max(0, Math.min(desiredNewRunners, maximumRunners - currentRunners));
+ 
+     const missingInstanceCount = Math.max(0, scaleUp - newRunners);
+ 
+     if (missingInstanceCount > 0) {
+       logger.info('Not all runners will be created for this group, maximum number of runners reached.', {
+-        desiredNewRunners: scaleUp,
++        desiredNewRunners,
+       });
+ 
+       if (ephemeralEnabled) {

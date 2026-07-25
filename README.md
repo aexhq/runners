@@ -82,8 +82,39 @@ Empty subnets and availability zones do not have an hourly charge. Set
    runs-on: [self-hosted, linux, x64, ec2-spot]
    ```
 
-The first job waits for an EC2 instance to boot. Subsequent jobs also get fresh
-instances unless you deliberately configure a warm pool.
+Demand scale-up batches up to three nearby workflow-job webhook deliveries for
+one scale-up invocation and requests a three-runner ephemeral `m6i.large` Spot
+burst for each valid job group. When concurrent jobs are already queued, they
+consume the burst immediately; when they are not, the unused runners are
+reaped by the one-minute cleanup Lambda after the one-minute minimum runtime.
+There is no always-on warm pool. Large jobs remain cold and use their guarded
+dynamic labels only when requested.
+
+Ephemeral scaling intentionally does not re-check GitHub's job API before
+launching. GitHub can briefly report a new workflow job as not queued while
+the webhook is already waiting for a runner; enabling that check can strand the
+job. A cancelled job may therefore cause one short-lived Spot instance to be
+created, but a valid queued job is never dropped by a transient API race.
+
+Jobs use a 2-vCPU/8-GiB instance and a 40-GiB encrypted gp3 root volume by
+default. Trusted workflows can select an approved larger x64 instance or a
+larger gp3 root volume with guarded dynamic labels:
+
+```yaml
+runs-on:
+  - self-hosted
+  - linux
+  - x64
+  - ec2-spot
+  - ghr-ec2-instance-type:m7a.xlarge
+  - ghr-ec2-ebs-volume-size:80
+  - ghr-ec2-ebs-volume-type:gp3
+```
+
+The Terraform policy allow-lists instance types and caps dynamic root volumes
+at 200 GiB. AMI, subnet, placement, accelerator, encryption, and arbitrary EBS
+performance overrides are rejected by the webhook. Extend the approved catalog
+in Terraform before a workflow requests a new hardware shape.
 
 Jobs use a 2-vCPU/8-GiB instance and a 40-GiB encrypted gp3 root volume by
 default. Trusted workflows can select an approved larger x64 instance or a
@@ -135,6 +166,11 @@ Amazon Linux 2023 is not a byte-for-byte replacement for GitHub's
 `ubuntu-latest` image. The baseline includes Docker, Git, Node.js 22, npm, jq,
 curl, and the runner itself. Use setup actions or a job container for other
 tools your build needs. Docker and container/service jobs are supported.
+
+The pinned module-managed Amazon Linux 2023 image is the validated baseline;
+this repository does not select an untested custom AMI. A future pre-baked
+Image Builder/Packer AMI must be built and validated here before changing the
+runner image contract.
 
 ## Operations
 

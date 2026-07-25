@@ -99,6 +99,9 @@ jobs:
       - name: Initialize Terraform
         run: terraform -chdir=terraform init -backend-config=.backend.hcl
 
+      - name: Build demand-burst runner Lambda
+        run: bash scripts/build-burst-runner-lambda.sh
+
       - name: Check Terraform formatting
         run: terraform -chdir=terraform fmt -check -recursive
 

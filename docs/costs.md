@@ -21,12 +21,16 @@ runner deployment.
 Spot is usually the cheapest EC2 purchasing model for interruptible CI, but it
 is not always the cheapest execution platform overall. Compare actual job
 duration, boot latency, architecture, interruption rate, GitHub plan minutes,
-and alternatives such as AWS Graviton Spot. The default `m*.large` x64 list is
-chosen for broad workflow compatibility and roughly 2 vCPU / 8 GiB capacity,
-not the absolute lowest price.
+and alternatives such as AWS Graviton Spot. The default `m6i.large` x64 type
+provides roughly 2 vCPU / 8 GiB capacity; larger types are requested only by
+guarded workflow labels.
 
 Set an AWS Budget and alarms before enabling the fleet. `MAXIMUM_RUNNER_COUNT`
-is the hard concurrency/cost guardrail and defaults to 10.
+is the hard concurrency/cost guardrail and defaults to 20. Demand bursts do not
+create capacity when no job is queued: each valid job group requests at most
+three ephemeral runners, and concurrent jobs consume them. The one-minute
+cleanup check reaps unused runners after the one-minute minimum runtime, so
+there is no warm-runner Spot charge between jobs.
 
 ## Cost allocation
 
