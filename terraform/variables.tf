@@ -109,38 +109,6 @@ variable "allowed_dynamic_instance_types" {
   }
 }
 
-variable "allowed_dynamic_instance_types" {
-  description = "Approved x64 instance types workflows may request with ghr-ec2-instance-type."
-  type        = list(string)
-  default = [
-    "m7a.large",
-    "m7i.large",
-    "m6a.large",
-    "m6i.large",
-    "m5a.large",
-    "m5.large",
-    "m7a.xlarge",
-    "m7i.xlarge",
-    "m6a.xlarge",
-    "m6i.xlarge",
-    "m5a.xlarge",
-    "m5.xlarge",
-    "c7a.xlarge",
-    "c7i.xlarge",
-    "c6a.xlarge",
-    "c6i.xlarge",
-    "r7a.xlarge",
-    "r7i.xlarge",
-    "r6a.xlarge",
-    "r6i.xlarge",
-  ]
-
-  validation {
-    condition     = length(var.allowed_dynamic_instance_types) > 0
-    error_message = "allowed_dynamic_instance_types must contain at least one EC2 instance type."
-  }
-}
-
 variable "maximum_runner_count" {
   description = "Maximum concurrent EC2 runners; this is the primary cost guardrail."
   type        = number
