@@ -19,10 +19,9 @@ module "github_runners" {
 
   enable_organization_runners = true
   runner_group_name           = var.runner_group_name
-  # Keep dynamic `ghr-*` labels out of the base matcher. The webhook
-  # dispatcher strips those labels while matching and adds them back to the
-  # ephemeral runner created for that job.
-  runner_extra_labels   = ["ec2-spot"]
+  # Keep the default instance selector on every runner. Dynamic labels are
+  # also copied from each workflow job into its JIT runner configuration.
+  runner_extra_labels   = ["ec2-spot", "ghr-ec2-instance-type:m6i.large"]
   repository_white_list = var.repository_allow_list
 
   enable_ephemeral_runners = true
@@ -31,8 +30,11 @@ module "github_runners" {
   # API can briefly report a newly-created job as not queued even though the
   # workflow is waiting for a runner; enabling this check drops that event
   # and strands the job indefinitely.
-  enable_job_queued_check                 = false
-  enable_runner_bidirectional_label_match = true
+  enable_job_queued_check = false
+  # The webhook strips ghr-* labels before matching. Requiring the runner
+  # label set to be a bidirectional exact match would reject that valid
+  # dynamic-label workflow shape before scale-up can dispatch it.
+  enable_runner_bidirectional_label_match = false
   enable_dynamic_labels                   = true
   ec2_dynamic_labels_policy = {
     # Dynamic configuration is intentionally default-deny for every EC2
