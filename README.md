@@ -1,7 +1,36 @@
 # EC2 Spot GitHub Actions runners
 
+> # ⚠ RETIRED — 2026-07-25
+>
+> **This runner fleet is no longer used by any workflow.** All `aexhq` CI and
+> deploy jobs run on GitHub-hosted `ubuntu-latest`.
+>
+> - **Why:** measured over a 48-hour release loop, the fleet overshot its
+>   configured `maximum_runner_count = 20` to **90 concurrent instances**, held
+>   **~1-hour** instances against jobs that run **2–7 minutes** (840 instances /
+>   2,064 vCPU-hours / **$57.84**, ~90% of it boot, idle burst, and orphaned
+>   capacity), and added **~1.5–1.9 min** of boot queue time per job. The same
+>   workload on GitHub-hosted runners would have cost roughly **$36**, with the
+>   same 20-concurrent-job cap the GitHub Free plan already provides. The
+>   January 2026 price cut to $0.006/min and the shelving of the proposed
+>   self-hosted-minute surcharge removed the remaining reason to own a fleet.
+> - **Infrastructure state:** **left deployed but idle.** The fleet scales to
+>   zero, so idle cost is **~$0**. Nothing is dispatching jobs to it.
+> - **Deployment:** `.github/workflows/deploy.yml` no longer deploys on push to
+>   `main`. It is `workflow_dispatch` only, so the stack cannot drift
+>   accidentally.
+> - **To tear it down:** run the **Destroy runners** workflow
+>   (`.github/workflows/destroy.yml`) and type the required confirmation, when
+>   and if the team decides to. That is a deliberate, separate decision — do not
+>   run it as cleanup.
+>
+> Everything below documents how the fleet works and is retained so it can be
+> understood, revived, or destroyed knowingly. It is not current operating
+> guidance. The full decision record lives in the `aex` workspace at
+> `references/cicd-review-2026-07-25.md`.
+
 Deploy ephemeral, organization-level GitHub Actions runners on AWS EC2 Spot
-instances. A push to `main` runs Terraform from a GitHub-hosted
+instances. **Deploy runners** applies Terraform from a GitHub-hosted
 `ubuntu-latest` runner, then configures the GitHub App webhook automatically.
 The fleet scales to zero when idle.
 
@@ -64,10 +93,11 @@ Empty subnets and availability zones do not have an hourly charge. Set
    `REPOSITORY_ALLOW_LIST` is a JSON array such as
    `["octo-org/api","octo-org/web"]`.
 
-5. Protect `main`, review the runner group's repository access, then push to
-   `main` or run **Deploy runners** manually. The workflow verifies that the
-   GitHub App is installed on `TARGET_GITHUB_ORG`, creates the state bucket,
-   applies Terraform, and updates the App's webhook URL.
+5. Protect `main`, review the runner group's repository access, then run
+   **Deploy runners** manually. The workflow is `workflow_dispatch` only — a
+   push to `main` does not deploy. It verifies that the GitHub App is installed
+   on `TARGET_GITHUB_ORG`, creates the state bucket, applies Terraform, and
+   updates the App's webhook URL.
 
    `RUNNER_GROUP_NAME` must name an existing group; every organization already
    has the `Default` group.
