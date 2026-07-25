@@ -1,8 +1,9 @@
 name: Deploy runners
 
+# The runner fleet is RETIRED (2026-07-25) and no workflow dispatches jobs to
+# it. The push trigger is removed deliberately so the stack can never
+# auto-deploy again; deployment is manual-only. Tear-down is destroy.yml.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
