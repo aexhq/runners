@@ -1,6 +1,6 @@
 module "github_runners" {
   source  = "github-aws-runners/github-runner/aws"
-  version = "7.9.0"
+  version = "7.10.1"
 
   aws_region = var.aws_region
   prefix     = var.name_prefix
